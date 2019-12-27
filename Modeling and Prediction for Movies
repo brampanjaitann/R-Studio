@@ -1,0 +1,220 @@
+---
+title: "Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(readr)
+library(GGally)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `movies`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("~/R/movies.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+The research uses random sampling in collecting the datas, therefore the result is generalizable to all the movie population.
+
+On the other hand, the are no random assignment used, so there is no causation occurs within the research result.
+
+* * *
+
+## Part 2: Research question
+
+What is the most influential factors contributing to movie's popularity. We would like to know how internal and external factors affect the popularity of the movies.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+Before we conduct any research, we need to make sure the dataset is cleaned, menaning all NAs are removed.
+
+```{r}
+sum(is.na(movies) == TRUE)
+```
+
+There are NA datas (precisely 81) recorded inside new movies_clean dataset, therefore we need to remove them.
+
+```{r}
+movies_clean <- na.omit(movies)
+
+nrow(movies_clean)
+```
+
+Next, We need to summarize the popularity of the movies, we will use movie ratings as parameter.
+
+There are two movie rating variables within the dataset, **imdb_rating** by IMDB and **audience score** by Rotten Tomatoes. We need to make sure if those two are similar and linear with each other.
+
+```{r}
+ggplot(data = movies_clean, aes(x = imdb_rating, y = audience_score)) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE)
+```
+
+Next step is to summarize those two variables.
+
+```{r}
+summary(movies_clean$imdb_rating)
+```
+
+```{r}
+summary(movies_clean$audience_score)
+```
+
+```{r}
+ggplot(data= movies_clean, aes(x = imdb_rating)) + 
+  geom_histogram(binwidth = 0.5, color = "black", fill = "green")
+```
+
+```{r}
+ggplot(data = movies_clean, aes(x = audience_score)) +
+  geom_histogram(binwidth = 5, color = "black", fill = "yellow")
+```
+
+The distribution of IMDB rating and Rotten Tomatoes scoring are left skewed. However, the IMDB rating is skewed more.
+
+* * *
+
+## Part 4: Modeling
+
+# Model
+
+Now, we create the linear regression model name **lm_rating**. I choose R-squared backwards elimination. I use R-squared since it is the best way to conduct the most accurate model and backwards elimination because it is easier to see the full model first before eliminating it one by one. We also need to make sure that all explanatory variables are independent with each other.
+
+```{r}
+lm_rating_draft <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_actor_win + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+summary(lm_rating_draft)$adj.r.squared
+```
+
+We can see the R squred for the model is 0.2904. Now, we will eliminate the variables one by one and make new models.
+ 
+```{r}
+lm_min_title_type <- lm(imdb_rating ~ genre + runtime + mpaa_rating + best_actor_win + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_genre <- lm(imdb_rating ~ title_type + runtime + mpaa_rating + best_actor_win + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_mpaa_rating <- lm(imdb_rating ~ title_type + runtime + best_actor_win + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_runtime <- lm(imdb_rating ~ title_type + genre + mpaa_rating + best_actor_win + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_best_actor_win <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_actress_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_best_actress_win <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_actor_win + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_best_dir_win <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_actor_win + best_actress_win + best_pic_win + top200_box, data = movies_clean)
+
+lm_min_best_pic_win <- lm(imdb_rating ~ title_type + genre + runtime + best_actor_win + best_actress_win + best_dir_win + top200_box, data = movies_clean)
+
+lm_min_top200_box <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_actor_win + best_actress_win + best_dir_win + best_pic_win, data = movies_clean)
+
+table(r1 = summary(lm_min_title_type)$adj.r.squared,
+          r2 = summary(lm_min_genre)$adj.r.squared,
+          r3 = summary(lm_min_runtime)$adj.r.squared,
+          r4 = summary(lm_min_mpaa_rating)$adj.r.squared,
+          r5 = summary(lm_min_best_actor_win)$adj.r.squared,
+          r6 = summary(lm_min_best_actress_win)$adj.r.squared,
+          r7 = summary(lm_min_best_dir_win)$adj.r.squared,
+          r8 = summary(lm_min_best_pic_win)$adj.r.squared,
+          r9 = summary(lm_min_top200_box)$adj.r.squared)
+```
+ 
+We find that we need to get rid of some variables which contribute to the adjusted R squared decrerase. They are **best_actor_win** and **best_actress_win**. We name the new model **lm_rating_final**.
+ 
+```{r}
+lm_rating_final <- lm(imdb_rating ~ title_type + genre + runtime + mpaa_rating + best_dir_win + best_pic_win + top200_box, data = movies_clean)
+
+summary(lm_rating_final)$adj.r.squared
+```
+
+We exclude certain variables :
+**1. title** : Names are not the appropriate variable in this case.
+**2. studio** : I find it hard people know and care about the studio takes place to make a film.
+**3.** Release time : I believe apart from the release time, there are more influential variables. People will watch anything they find exciting regardless of when it is released.
+**4.** URLs : There is nothing to do with URLs.
+**5. best_actor_win** : Not significant.
+**6. best_actress_win** : Not significant.
+**7.** **actor2** to **actor5** : Names are not the appropriate variable in this case.
+
+## Model Diagnostics
+
+# Linearity between x and y variable
+
+```{r}
+plot(lm_rating_final$residuals ~ movies_clean$runtime)
+```
+
+We can see here that the residual plot is randomly scattered, therefore we we can continue.
+
+# Nearly normal residuals with mean 0
+
+```{r}
+ggplot(data = lm_rating_final, aes(x = .resid)) +
+  geom_histogram(binwidth = 0.25, color = "black", fill = "lightblue")
+```
+
+The residuals distribution is normal with mean 0, meaning the condition is met.
+
+# Constant variability of residuals
+
+```{r}
+plot(lm_rating_final$residuals ~ lm_rating_final$fitted)
+```
+
+The plot shows constant variability of residuals, although not fully constant, it is tolerable and we can move on.
+
+# Independent residuals
+
+```{r}
+plot(lm_rating_final$residuals)
+```
+
+The plow shows randomly scattered residuals, so the independence requirement is met.
+
+* * *
+
+## Part 5: Prediction
+
+Here, we will create a data frame consisting variables of a movie Suicide Squad and predict the score.
+
+```{r}
+suicide_squad <- data.frame(title_type = "Feature Film", genre = "Action & Adventure", runtime = 123, mpaa_rating = "PG-13", best_dir_win = "no", best_pic_win = "yes", top200_box = "no")
+```
+
+```{r}
+predict(lm_rating_final, suicide_squad, interval = "prediction", level = 0.95)
+```
+
+The interval shows 4.6383 to 8.5158 range with 95% of confidence level. The true score of Suicide Squad is 6.0, hence the model is correct predicting it. You can check by visiting https://www.imdb.com/title/tt1386697/?ref_=adv_li_tt
+
+* * *
+
+## Part 6: Conclusion
+
+The linear regression model is a complex methodology to conduct prediction. Therefore it is accurate if we have enough datas. The result of my study finds the model consisting of some variables associated.
+
+I learned that making the right model is crucial in using linear regression method, otherwise the result will also be inaccurate.
+
+There are some weaknesses, though. One of them is the vulnerable diagnostics, although the condition is barely met, it is sensitive to failure of the model.
+
+In the future, data collecting is crucial. Collecting and cleaning the data is one of the hardest step of data analysis. It is possible to update the model regularly due to more data collection.
