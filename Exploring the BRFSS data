@@ -1,0 +1,163 @@
+---
+title: "Exploring the BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(knitr)
+library(rmarkdown)
+```
+
+### Load data
+
+```{r}
+load("~/R/brfss2013.Rdata")
+```
+
+```{r}
+dim(brfss2013)
+```
+
+There are 491.775 datas contained in the brfss2013 dataset with 330 variables.
+
+* * *
+
+## Part 1: Data
+
+The datas are collected through monthly survey conducted on landline and cellular telephones. The datas collected from landline telephones are generalizable since the adult household are randomly chosen. But, the datas do not conclude to causation since there is no random assignment conducted.
+
+Meanwhile, the datas collected from cellular telephone are not generalizable since the participants are not randomly chosen. The datas also do not conclude to causation since there is no random assignment. The study was observational and not experimental.
+
+* * *
+
+## Part 2: Research questions
+
+**Research question 1:** Calculate probability of randomly picking a person who smokes everyday and do exercise in the past 30 days are in at least a good condition. It would be fun to find out if regular exercises will reduce or cure the effect of frequent smoking
+
+**Research question 2:** Calculate the average sleep time of people who ever told their blood pressure and cholesterol high. We would like to know the association between blood pressure and cholesterol condition of American and their sleep time.
+
+**Research question 3:** Find the association between life satisfaction and income level. The objective of the research is to find out if how much people gets will be one of the main factor of their satisfaction in life.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+
+First, we need to create new dataset with a NA datas on genhlth and smokday2 are removed. Therefore, we make new dataset called question1_data. The command tells that the question1_data cleans genhlth and smokday2 variable.
+
+```{r}
+question1_data <- brfss2013 %>%
+  filter(is.na(genhlth) == FALSE, is.na(smokday2) == FALSE, is.na(exerany2) == FALSE)
+```
+
+```{r}
+dim(question1_data)
+```
+
+
+Now we have removed all datas containing NAs. As we can see, there are 204.189 datas with clean genhlth and smokday2 variable, it means there are 287.586 datas that are not.
+
+The next step is to create new dataset named "research1" where we filter datas in "question1_data" to meet the conditions mentioned in the question. Those conditions are the "genhlth" variable to be minimum in Good condition (Good, Very Good, and Excellent), the "smokday2" variable to be Every Day, and "exerany2" variable to be Yes.
+
+```{r}
+research1 <- question1_data %>% 
+  filter(genhlth == "Excellent" | genhlth == "Very Good" | genhlth == "Good", smokday2 == "Every day", exerany2 == "Yes")
+```
+
+Now we have created the "research1" dataset, now it is time to calculate the probability. We can get it from dividing the numbers of row in "research1" from numbers of row in "question1_data".w
+```{r}
+nrow(research1) / nrow(question1_data)
+```
+
+Based on the equation, there are no data that meets the condition, hence the probability of the people who smokes every day and did exercise in the past 30 days but still in at least good condition is 7.2%.
+
+To visualize the result of the observation, we need to first create another variable named "count_data1" to see whether every datas meet the conditions or not.
+
+```{r}
+question1_data <- question1_data %>% mutate(count_data1 = ifelse(smokday2 == "Every day" & exerany2 == "Yes", "Smoke and Exercise", "Don't Smoke and Exercise"))
+```
+
+Then, in order to create the barplot, I choose to create the "count_data1" and "genhlth" table first.
+
+```{r}
+counts <- table(question1_data$count_data1, question1_data$genhlth)
+
+counts
+```
+
+Lastly, we make the barplot showing the proportions of people who smokes every day and did exercise in past 30 days covered in green and people who does not smoke every day and did not di exercise in past 30 days covered in blue.
+
+```{r}
+barplot(counts, main = "Comparison Bar", xlab = "General Health", ylab = "Amount", col=c("blue", "green"))
+```
+
+
+**Research question 2:**
+
+First of all, we need to make sure the dataset we are going to use is clean. The variables we will use are "sleptim1", "bphigh4", and "bloodcho", aslo we will selcet only "Yes" and "No" data for the "bphigh4." Therefore we will create new dataset named "question2_data" containing datas needed.
+
+```{r}
+question2_data <- brfss2013 %>%
+  select(sleptim1, bphigh4, bloodcho)
+```
+
+We would like also to filter the "Yes" and "No" data only for "bphigh4". Next, we remove the NAs.
+
+```{r}
+question2_data <- question2_data %>% 
+  filter(bphigh4 == "Yes" | bphigh4 == "No") %>%
+  na.omit(sleptim1, bphigh4, bloodcho)
+```
+
+Then, we filter datas in select_data2 to contain only "Yes" on both "bphigh4" and "bloodcho".
+
+```{r}
+ select_data2 <- question2_data %>% 
+  filter(bphigh4 == "Yes", bloodcho == "Yes")
+```
+
+Lastly, we need to convert the "sleptim1" datas from character to numeric in order to calculate the average. After that, we directly calculate the average using mean() function.
+
+```{r}
+select_data2$sleptim1 <- select_data2$sleptim1 %>%
+  as.numeric(select_data2$sleptim1)
+
+summary(select_data2$sleptim1)
+```
+
+From the result of the calculation, we can see that Americans who have been told they had high blood pressure and cholesterol high have in average 7.068 hours of sleep.
+
+**Research quesion 3:**
+ 
+First, we need to create new dataset named question3_data containing only variables we need, in this case "income2" and "lastisfy". Also, do not forget to remove all the NAs data.
+
+```{r}
+question3_data <- brfss2013 %>% 
+  select(income2, lsatisfy) %>% 
+  na.omit()
+```
+
+Now we have made a new dataset and clean it. Next, we
+
+```{r}
+table_data3 <- table(question3_data$lsatisfy, question3_data$income2)
+
+table_data3
+```
+
+As you can see, the proportions of the amount of every life satisfaction level keep changing based on income level. So there is association between income level and life satisfaction of the Americans.
+
+
