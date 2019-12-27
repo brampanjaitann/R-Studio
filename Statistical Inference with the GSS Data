@@ -1,0 +1,251 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(tidyverse)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `gss`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("~/R/gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+GSS collects datas by conducting interview to numerous random respondents. Interview conducted via landline telephone uses random sampling, so we can conclude that the result is generalizable to all the population.
+
+Meanwhile, interviews via cellular telephone does not use random sampling, hence the result is not generalizable to all the population.
+
+The interviews do not use random sampling, hence the result does not conclude to causation.
+
+* * *
+
+## Part 2: Research question
+
+I am intended to focus on American society confidence in financial institutions and banks. Therefore, the research question will focus around that subject.
+
+**Research quesion 1:**
+
+We would like to prove if there is enough evidence that majority of Americans have confidence in most of banks and financial institutions. We need to know if financial institutions in America gain trust of society or not.
+
+**Research question 2**
+
+We would like to know what is the average age of Americans having confidence in most banks and financial institutions. It would be interesting to know if older generations tend to have confidence more.
+
+**Research question 3**
+
+We would also like to know the variance occur based on confidence towards financial institutions and banks to age. This final question is to know if there is a significant variance between generations on their confidence level.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+Before we conduct the research, it will be better to create a new dataset with cleaned datas in the first place by removing the NAs is **confinan** variable.
+
+```{r}
+gss_clean <- gss %>% 
+  filter(is.na(confinan) == FALSE)
+
+dim(gss_clean)
+```
+
+There are 35.053 datas left inside the dataset.
+
+**Research Question 1**
+
+First, we need to find out the distribution of the confidence in the financial institutions and banks.
+
+```{r}
+summary(gss_clean$confinan)
+```
+
+It looks like most of the Americans have confidence only in some financial institutions and banks. To make it clearer, we need to visualize the distribution.
+
+```{r}
+ggplot(data = gss_clean, aes(x = confinan)) + 
+  geom_bar(color = "black", fill = "green")
+```
+
+**Research Question 2**
+
+Before, we need to create a new dataset called gss_question2 which has the **age** variable cleaned from NAs and has been filtered only with "A Great Deal" **confinan** datas.
+
+```{r}
+gss_question2 <- gss_clean %>%
+  filter(is.na(age) == FALSE) %>%
+  filter(confinan == "A Great Deal")
+```
+
+This will make the inference process easier and more convenient.
+
+Then, we will take a look on the summary statistics of the new dataset.
+
+```{r}
+summary(gss_question2$age)
+```
+
+As we can see, the average value is 47.24 years old. While, minimum is 18 and maximum is 89.
+
+Next, we visualize the distribution.
+
+```{r}
+ggplot(data = gss_question2, aes(x = age)) + geom_histogram(binwidth = 5, color = "black", fill = "green")
+```
+
+By looking at the graph, we can see that the distribution based on **age** of the gss_question2 dataset is right skewed.
+
+**Research Question 3**
+
+To conduct the test, we need to first create new dataset containing cleaned **age** variable. We will clean the **age** variable on the gss_clean dataset since we have removed all the NAs within **confinan** variable inside the corresponding dataset.
+
+```{r}
+gss_question3 <- gss_clean %>%
+  filter(is.na(age) == FALSE)
+
+summary(gss_question3$age)
+```
+
+By taking a look at the new **age** datas, we know the average age is 45.46, with minimum 18 years old and maximum 89 years old.
+
+Then, we visualize the distribution using boxplot based on each confidence level.
+
+```{r}
+ggplot(data = gss_question3, aes(x = confinan, y = age)) + geom_boxplot(color = "black", fill = "yellow")
+```
+
+Based on the boxplot, we can see that the average on each confidence level is roughly the same, while "A Great Deal" datas have the widest range.
+
+* * *
+
+## Part 4: Inference
+
+**Research Question 1**
+
+We would like to use the hypotheses test first to do our research. 
+
+The first step is to create the hyphoteses :
+
+Ho : p = 0.5
+Ha : p < 0.5
+
+It is stated that the null hypotheses is at least 50% of the sample chose "A GREAT DEAL" in **confinan** variable. While, the alternative hypotheses says less than 50% do so.
+
+The second step is to check the conditions :
+
+**1. Independence**
+The amount of data inside the cleaned "gss" dataset is 57061 which is less than 10% of the whole population. The data collection process was also done with random sampling. It means that the datas are independent between each other.
+
+**2. Sample size/skew**
+We need to calculate the number of successes and failures. Remember, the success means the **confinan** variable contains "A GREAT DEAL" value, otherwise, it is a failure.
+
+```{r}
+gss_clean %>% count(confinan == "A Great Deal")
+```
+
+By looking at the data, there are 9.015 "A Great Deal" successes and 26.038 failures. It mean that there enough amount of successes and failures. Hence, the distribution will be nearly normal.
+
+The next step is to conduct the hypotheses test. We will use only hypotheses test in this case since the variable **confinan** has more than two levels where confidence interval is not compatible with.
+
+```{r}
+inference(y = confinan, data = gss_clean, statistic = "proportion", type = "ht", null = 0.5, alternative = "greater", method = "theoretical", success = "A Great Deal")
+```
+
+Based on the hypotheses test, the p value is relatively very big, it means there is not enough evidence to reject the null hypotheses. We can conclude that less than 50% of 
+
+**Research question 2**
+
+The first step is to write the hypotheses of the inference. As we have found before, the observed mean is 45.46 years old. Then we will take 47.24 as the null value, and otherwise is alternative value.
+
+Ho : mean = 47.24
+Ha : mean != 47.24
+
+The second step now is to check the conditions of the distribution.
+
+**Independence**
+The sample size that we are going to use (People who has confidence in most institutions) is clearly less than 10% of all the population of the Americans. Therefore, we can conclude that the sample is independent between each other.
+
+**Sample size/skew**
+There are more than 8.988 successes (A Great Deal), and 25.946 failures in the dataset which are far more than 30. By seeing the sample size we can conclude that the distribution will be nearly normal.
+
+We will use both hypotheses test and confidence interval confirm the result of one method is not biased.
+
+```{r}
+inference(y = age, data = gss_question2, statistic = "mean", type = "ht", null = 47.24, alternative = "twosided", method = "theoretical")
+```
+
+As we can see from the result of the hypotheses test, the p value is very high. Hence, we are failed to reject the null hypotheses. It means that the population parameter (age average) is roughly 47.24.
+
+Next step is to make the confidence interval with 95% confidence level.
+
+```{r}
+inference(data = gss_question2, y = age, statistic = "mean", type = "ci", null = 47.24, method = "theoretical")
+```
+
+The value 47.24 is within the interval. The hypotheses test and confidence interval results are agree to each other. Hence, we are sure that the conclusion is valid.
+
+The conclusion is the average age of Americans who are confident in banks and other financial institutions is 47.24. It is a quite high number, then the older generation tends to trust them more.
+
+Or, from the confidence interval, we are 95% confident that the average age of Americans who are confident in banks and other financial institutions fall between 46.84 and 47.63.
+
+**Research question 3**
+
+The first step is to write the hypotheses : we write the null hypotheses of all the mean of each confidence level is roughly the same, while the alternative hypotheses is at least one mean is different.
+
+Ho : mean 1 = mean2 = mean3
+Ha : At least one mean is different
+
+Second step is to check the condition.
+
+**Independence**
+Within and between the groups are independent to each other since GSS used random sampling, also GSS conducted the survey to less than 10% of the population.
+
+**Constant Variance**
+
+We need to find out the variance of each level.
+
+```{r}
+gss_question3 %>%
+  group_by(confinan) %>%
+  summarise(age_variance = var(age))
+```
+
+It looks like the variance of each level is still similar although not too close. Hence, we can still move on to the next condition check.
+
+**Approximate Normality**
+
+We used large sample sizes of each level, therefore the distributions of each level will be nearly normal.
+
+To conduct the variance analysis, we will use the one way ANOVA method. First, we create new values containing the ANOVA result. Then, we summarize it.
+
+```{r}
+variance_confidence <- aov(data = gss_question3, age ~ confinan)
+
+summary(variance_confidence)
+```
+
+Then, we need to find the p-value based on the result by using the pf function.
+```{r}
+pf(63.33, df1 = 2, df2 = 34931, lower.tail = FALSE)
+```
+
+We have found out that the p-value is quite low, hence we reject the null hypotheses and we can conculde that there is difference in variance between confidence levels on the age.
